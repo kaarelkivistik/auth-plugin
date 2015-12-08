@@ -4,6 +4,7 @@ import https from 'https';
 import express from 'express';
 import { json } from 'body-parser';
 import fb from 'fb';
+import soap from 'soap';
 
 import { serverHost,
 	serverPort,
@@ -11,7 +12,8 @@ import { serverHost,
 	serverCertPath, 
 	serverCACertPath,
 	fbAppId, 
-	fbAppSecret } from './setup';
+	fbAppSecret,
+	mIdWsdlUrl } from './setup';
 
 import renderCallbackPage from './lib/render-callback-page';
 
@@ -26,8 +28,15 @@ const options = {
 const app = express();
 
 app.use(json());
-app.use('/client', express.static('client'));
 app.use('/example', express.static('example'));
+
+https.createServer(options, app).listen(serverPort, serverHost);
+
+/* Plugin interface */
+
+app.get('/', (req, res) => {
+	res.sendFile(path.join(__dirname, 'assets', 'plugin.html'));
+});
 
 /* Facebook */
 
@@ -61,4 +70,63 @@ app.get('/facebook/redirect', (req, res) => {
 	});
 });
 
-https.createServer(options, app).listen(serverPort, serverHost);
+/* mobile-ID */
+
+app.get('/m-id', (req, res) => {
+	res.sendFile(path.join(__dirname, 'assets', 'm-id.html'));
+});
+
+app.get('/m-id/authenticate', (req, res) => {
+	const { phone } = req.query;
+
+	let authenticateArgs = {
+		IDCode: '',
+		CountryCode: '',
+		PhoneNo: phone,
+		Language: 'EST',
+		ServiceName: 'Testimine',
+		MessageToDisplay: 'auth-plugin',
+		SPChallenge: '',
+		MessagingMode: 'asynchClientServer',
+		AsyncConfiguration: '',
+		ReturnCertData: true,
+		ReturnRevocationData: false,
+	};
+
+	soap.createClient(mIdWsdlUrl, (clientError, client) => {
+		client.MobileAuthenticate(authenticateArgs, (authenticateError, authenticateResponse) => {
+			if (authenticateError || !authenticateResponse.ChallengeID) return res.sendStatus(500);
+
+			let { 
+				UserGivenname: { $value: firstName },
+				UserSurname: { $value: lastName },
+				ChallengeID: { $value: challengeId },
+				Sesscode: { $value: sessCode },
+			} = authenticateResponse;
+
+			let statusArgs = {
+				Sesscode: sessCode,
+				WaitSignature: false,
+			};
+
+			var timer = setInterval(() => {
+				client.GetMobileAuthenticateStatus(statusArgs, (statusError, statusResponse) => {
+					let {
+						Status: { $value: status }
+					} = statusResponse;
+
+					if (status == 'USER_AUTHENTICATED') {
+						clearInterval(timer);
+
+						res.send(renderCallbackPage({
+							type: 'MID',
+							profile: {
+								name: firstName + ' ' + lastName,
+							},
+						}));
+					}
+				});
+			}, 3000);
+		});
+	});
+});

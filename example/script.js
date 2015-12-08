@@ -7,7 +7,7 @@ function setMessage(message) {
 }
 
 function login() {
-	loginWindow = window.open('https://localhost:8443/client/');
+	loginWindow = window.open('https://localhost:8443/');
 }
 
 function authPluginCallback(response) {
@@ -15,6 +15,10 @@ function authPluginCallback(response) {
 
 	switch(response.type) {
 		case 'FACEBOOK':
+			setMessage('Hello, ' + response.profile.name + '!');
+			break;
+
+		case 'MID':
 			setMessage('Hello, ' + response.profile.name + '!');
 			break;
 	}
