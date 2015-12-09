@@ -13,6 +13,7 @@ import { serverHost,
 	serverCACertPath,
 	fbAppId, 
 	fbAppSecret,
+	fbRedirectUrl,
 	mIdWsdlUrl } from './setup';
 
 import renderCallbackPage from './lib/render-callback-page';
@@ -40,12 +41,10 @@ app.get('/', (req, res) => {
 
 /* Facebook */
 
-const fbRedirectUri = 'https://' + serverHost + (serverPort ? ':' + serverPort : '') + '/facebook/redirect';
-
 app.get('/facebook', (req, res) => {
 	res.redirect(fb.getLoginUrl({
 		scope: 'public_profile',
-		redirect_uri: fbRedirectUri,
+		redirect_uri: fbRedirectUrl,
 		client_id: fbAppId,
 	}));
 });
@@ -56,7 +55,7 @@ app.get('/facebook/redirect', (req, res) => {
 	fb.api('/oauth/access_token', {
 	    client_id: fbAppId,
 	    client_secret: fbAppSecret,
-	    redirect_uri: fbRedirectUri,
+	    redirect_uri: fbRedirectUrl,
 	    code: code,
 	}, tokenResponse => {
 		fb.setAccessToken(tokenResponse.access_token);
