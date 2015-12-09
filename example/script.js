@@ -7,7 +7,7 @@ function setMessage(message) {
 }
 
 function login() {
-	loginWindow = window.open('https://localhost:8443/');
+	loginWindow = window.open('/');
 }
 
 function authPluginCallback(response) {
