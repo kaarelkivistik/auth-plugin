@@ -21,6 +21,10 @@ function authPluginCallback(response) {
 		case 'MID':
 			setMessage('Hello, ' + response.profile.name + '!');
 			break;
+
+		case 'ID':
+			setMessage('Hello, ' + response.profile.name + '!');
+			break;
 	}
 
 	loginWindow.close();

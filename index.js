@@ -1,6 +1,7 @@
 import fs from 'fs';
 import path from 'path';
 import https from 'https';
+import { stringify } from 'querystring';
 import express from 'express';
 import { json } from 'body-parser';
 import fb from 'fb';
@@ -8,6 +9,7 @@ import soap from 'soap';
 
 import { serverHost,
 	serverPort,
+	idServerPort,
 	serverKeyPath, 
 	serverCertPath, 
 	serverCACertPath,
@@ -21,17 +23,24 @@ import renderCallbackPage from './lib/render-callback-page';
 const options = {
 	key: fs.readFileSync(serverKeyPath),
 	cert: fs.readFileSync(serverCertPath),
-	ca: [fs.readFileSync(serverCACertPath)],
+};
+
+const idOptions = {
+	key: fs.readFileSync(serverKeyPath),
+	cert: fs.readFileSync(serverCertPath),
+	// ca: [fs.readFileSync(serverCACertPath)],
 	requestCert: true,
   	rejectUnauthorized: false,
 };
 
 const app = express();
+const idAuth = express();
 
 app.use(json());
 app.use('/example', express.static('example'));
 
 https.createServer(options, app).listen(serverPort, serverHost);
+https.createServer(idOptions, idAuth).listen(idServerPort, serverHost);
 
 /* Plugin interface */
 
@@ -139,6 +148,33 @@ app.get('/m-id/authenticate', (req, res) => {
 
 /* ID-card */
 
+idAuth.use((req, res) => {
+	if(!req.secure)
+		res.sendStatus(403);
+
+	let peerCertificate = req.connection.getPeerCertificate();
+		let { subject } = peerCertificate;
+
+		if (!subject || !subject.SN || !subject.GN || subject.C != 'EE') {
+		return res.sendStatus(500);
+		}
+
+	const query = { 
+		name: subject.GN + ' ' + subject.SN,
+	};
+
+	res.redirect('https://' + serverHost + ':' + serverPort + '/id/authenticate?' + stringify(query));
+});
+
 app.get('/id', (req, res) => {
-	res.send(req.connection.getPeerCertificate());
+	res.redirect('https://' + serverHost + ':' + idServerPort);
+});
+
+app.get('/id/authenticate', (req, res) => {
+	const { name } = req.query;
+
+	return res.send(renderCallbackPage({
+		type: 'ID',
+		profile: { name }
+	}));
 });
