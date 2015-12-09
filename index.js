@@ -20,7 +20,7 @@ import renderCallbackPage from './lib/render-callback-page';
 const options = {
 	key: fs.readFileSync(serverKeyPath),
 	cert: fs.readFileSync(serverCertPath),
-	ca: fs.readFileSync(serverCACertPath),
+	ca: [fs.readFileSync(serverCACertPath)],
 	requestCert: true,
   	rejectUnauthorized: false,
 };
@@ -136,4 +136,10 @@ app.get('/m-id/authenticate', (req, res) => {
 			}, 2000);
 		});
 	});
+});
+
+/* ID-card */
+
+app.get('/id', (req, res) => {
+	res.send(req.connection.getPeerCertificate());
 });
