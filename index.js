@@ -95,7 +95,8 @@ app.get('/m-id/authenticate', (req, res) => {
 
 	soap.createClient(mIdWsdlUrl, (clientError, client) => {
 		client.MobileAuthenticate(authenticateArgs, (authenticateError, authenticateResponse) => {
-			if (authenticateError || !authenticateResponse.ChallengeID) return res.sendStatus(500);
+			if (authenticateError || !authenticateResponse.ChallengeID) 
+				return res.status(500).send(authenticateError || authenticateResponse);
 
 			let { 
 				UserGivenname: { $value: firstName },
@@ -111,6 +112,8 @@ app.get('/m-id/authenticate', (req, res) => {
 
 			var timer = setInterval(() => {
 				client.GetMobileAuthenticateStatus(statusArgs, (statusError, statusResponse) => {
+					if(statusError) res.status(500).send(statusError);
+
 					let {
 						Status: { $value: status }
 					} = statusResponse;
@@ -124,9 +127,13 @@ app.get('/m-id/authenticate', (req, res) => {
 								name: firstName + ' ' + lastName,
 							},
 						}));
+					} else if(status !== 'OUTSTANDING_TRANSACTION') {
+						clearInterval(timer);
+
+						res.sendStatus(403);
 					}
 				});
-			}, 3000);
+			}, 2000);
 		});
 	});
 });
