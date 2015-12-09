@@ -8,6 +8,7 @@ import fb from 'fb';
 import soap from 'soap';
 
 import { serverHost,
+	serverPublicHost,
 	serverPort,
 	idServerPort,
 	serverKeyPath, 
@@ -163,11 +164,11 @@ idAuth.use((req, res) => {
 		name: subject.GN + ' ' + subject.SN,
 	};
 
-	res.redirect('https://' + serverHost + ':' + serverPort + '/id/authenticate?' + stringify(query));
+	res.redirect('https://' + serverPublicHost + ':' + serverPort + '/id/authenticate?' + stringify(query));
 });
 
 app.get('/id', (req, res) => {
-	res.redirect('https://' + serverHost + ':' + idServerPort);
+	res.redirect('https://' + serverPublicHost + ':' + idServerPort);
 });
 
 app.get('/id/authenticate', (req, res) => {
